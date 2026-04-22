@@ -404,6 +404,21 @@ tr:hover td {{ background: #f8fafc; }}
 
 <div class="container">
 
+  <!-- ── COMBINED OVERVIEW ──────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">🔗 Combined Overview <span>— full pipeline across campaigns &amp; subsequences</span></div>
+
+    <div class="cards" id="combinedCards"></div>
+
+    <div class="charts" style="grid-template-columns:1fr;">
+      <div class="chart-card"><h2>Full Pipeline by Client (Sent → Camp. Opened → Added to Sub → Sub Opened → Sub Replied)</h2><div class="chart-wrap" style="height:280px;"><canvas id="combinedPipelineChart"></canvas></div></div>
+    </div>
+
+    <div class="table-card">
+      <div id="combinedTableContainer"></div>
+    </div>
+  </div>
+
   <!-- ── MAIN CAMPAIGN ANALYTICS ─────────────────────────────── -->
   <div class="section">
     <div class="section-title">📊 Main Campaign Analytics <span>— parent campaigns performance</span></div>
@@ -522,6 +537,9 @@ const POSITIVE_CATS = new Set([
 
 // ── Render ────────────────────────────────────────────────────────────────────
 function render() {{
+  renderCombinedCards();
+  renderCombinedCharts();
+  renderCombinedTable();
   renderMainCards();
   renderMainCharts();
   renderMainTable();
@@ -530,6 +548,115 @@ function render() {{
   renderSubTable();
   document.getElementById('subCount').textContent    = filtSub.length;
   document.getElementById('parentCount').textContent = filtParent.length;
+}}
+
+// ── Combined Overview ─────────────────────────────────────────────────────────
+function renderCombinedCards() {{
+  const totSent   = filtParent.reduce((s,r) => s + r.total,        0);
+  const totPOpen  = filtParent.reduce((s,r) => s + r.opened,       0);
+  const totPReply = filtParent.reduce((s,r) => s + r.replied,      0);
+  const totSub    = filtParent.reduce((s,r) => s + r.added_to_sub, 0);
+  const totPos    = filtParent.reduce((s,r) => s + r.positive,     0);
+  const totSOpen  = filtSub.reduce((s,r)    => s + r.opened,       0);
+  const totSReply = filtSub.reduce((s,r)    => s + r.replied,      0);
+  const totSLeads = filtSub.reduce((s,r)    => s + r.total,        0);
+  document.getElementById('combinedCards').innerHTML = `
+    <div class="card"><div class="label">Total Sent</div><div class="value slate">${{totSent.toLocaleString()}}</div><div class="sub">${{filtParent.length}} campaigns</div></div>
+    <div class="card"><div class="label">Camp. Opened</div><div class="value green">${{totPOpen.toLocaleString()}}</div><div class="sub">${{totSent ? (totPOpen/totSent*100).toFixed(1) : 0}}% of sent</div></div>
+    <div class="card"><div class="label">Camp. Replied</div><div class="value purple">${{totPReply.toLocaleString()}}</div><div class="sub">${{totSent ? (totPReply/totSent*100).toFixed(1) : 0}}% of sent</div></div>
+    <div class="card"><div class="label">Added to Sub</div><div class="value blue">${{totSub.toLocaleString()}}</div><div class="sub">${{totSent ? (totSub/totSent*100).toFixed(1) : 0}}% of sent</div></div>
+    <div class="card"><div class="label">Sub Opened</div><div class="value emerald">${{totSOpen.toLocaleString()}}</div><div class="sub">${{totSLeads ? (totSOpen/totSLeads*100).toFixed(1) : 0}}% of sub leads</div></div>
+    <div class="card"><div class="label">Sub Replied</div><div class="value yellow">${{totSReply.toLocaleString()}}</div><div class="sub">${{totSLeads ? (totSReply/totSLeads*100).toFixed(1) : 0}}% of sub leads</div></div>
+    <div class="card"><div class="label">Total Positive</div><div class="value rose">${{totPos.toLocaleString()}}</div><div class="sub">${{totSent ? (totPos/totSent*100).toFixed(1) : 0}}% conversion</div></div>
+  `;
+}}
+
+function renderCombinedCharts() {{
+  const clientMap = {{}};
+  filtParent.forEach(r => {{
+    if (!clientMap[r.client]) clientMap[r.client] = {{sent:0, pOpened:0, pReplied:0, addedToSub:0, positive:0, sOpened:0, sReplied:0}};
+    clientMap[r.client].sent       += r.total;
+    clientMap[r.client].pOpened    += r.opened;
+    clientMap[r.client].pReplied   += r.replied;
+    clientMap[r.client].addedToSub += r.added_to_sub;
+    clientMap[r.client].positive   += r.positive;
+  }});
+  filtSub.forEach(r => {{
+    const c = r.parent;
+    if (!clientMap[c]) clientMap[c] = {{sent:0, pOpened:0, pReplied:0, addedToSub:0, positive:0, sOpened:0, sReplied:0}};
+    clientMap[c].sOpened  += r.opened;
+    clientMap[c].sReplied += r.replied;
+  }});
+  const labels = Object.keys(clientMap);
+  const data   = Object.values(clientMap);
+  if (charts['combinedPipelineChart']) charts['combinedPipelineChart'].destroy();
+  charts['combinedPipelineChart'] = new Chart(document.getElementById('combinedPipelineChart'), {{
+    type: 'bar',
+    data: {{
+      labels,
+      datasets: [
+        {{ label: 'Sent',         data: data.map(d => d.sent),       backgroundColor: '#cbd5e1', borderRadius: 3 }},
+        {{ label: 'Camp. Opened', data: data.map(d => d.pOpened),    backgroundColor: '#34d399', borderRadius: 3 }},
+        {{ label: 'Camp. Replied',data: data.map(d => d.pReplied),   backgroundColor: '#a78bfa', borderRadius: 3 }},
+        {{ label: 'Added to Sub', data: data.map(d => d.addedToSub), backgroundColor: '#60a5fa', borderRadius: 3 }},
+        {{ label: 'Sub Opened',   data: data.map(d => d.sOpened),    backgroundColor: '#059669', borderRadius: 3 }},
+        {{ label: 'Sub Replied',  data: data.map(d => d.sReplied),   backgroundColor: '#f97316', borderRadius: 3 }},
+      ]
+    }},
+    options: {{
+      responsive: true, maintainAspectRatio: false,
+      plugins: {{ legend: {{ labels: {{ color: '#94a3b8', font: {{ size: 11 }} }} }} }},
+      scales: {{
+        x: {{ ticks: {{ color: '#64748b', font: {{ size: 11 }} }}, grid: {{ color: '#f1f5f9' }} }},
+        y: {{ ticks: {{ color: '#64748b' }}, grid: {{ color: '#e2e8f0' }} }}
+      }}
+    }}
+  }});
+}}
+
+function renderCombinedTable() {{
+  const clientMap = {{}};
+  filtParent.forEach(r => {{
+    if (!clientMap[r.client]) clientMap[r.client] = {{sent:0, pOpened:0, pReplied:0, positive:0, addedToSub:0, sLeads:0, sOpened:0, sClicked:0, sReplied:0}};
+    clientMap[r.client].sent       += r.total;
+    clientMap[r.client].pOpened    += r.opened;
+    clientMap[r.client].pReplied   += r.replied;
+    clientMap[r.client].positive   += r.positive;
+    clientMap[r.client].addedToSub += r.added_to_sub;
+  }});
+  filtSub.forEach(r => {{
+    const c = r.parent;
+    if (!clientMap[c]) clientMap[c] = {{sent:0, pOpened:0, pReplied:0, positive:0, addedToSub:0, sLeads:0, sOpened:0, sClicked:0, sReplied:0}};
+    clientMap[c].sLeads   += r.total;
+    clientMap[c].sOpened  += r.opened;
+    clientMap[c].sClicked += r.clicked;
+    clientMap[c].sReplied += r.replied;
+  }});
+  const container = document.getElementById('combinedTableContainer');
+  const rows = Object.entries(clientMap);
+  if (!rows.length) {{ container.innerHTML = '<div class="no-data">No data.</div>'; return; }}
+  let html = `<table><thead><tr>
+    <th>Client</th>
+    <th>Sent</th><th>Camp. Opened</th><th>Camp. Replied</th><th>Added to Sub</th>
+    <th>Sub Leads</th><th>Sub Opened</th><th>Sub Clicked</th><th>Sub Replied</th><th>Positive</th>
+  </tr></thead><tbody>`;
+  rows.forEach(([client, d]) => {{
+    const pct = (n, tot) => tot ? (n/tot*100).toFixed(1) : 0;
+    html += `<tr>
+      <td><strong>${{esc(client)}}</strong></td>
+      <td>${{d.sent}}</td>
+      <td>${{d.pOpened}} <span class="rate">(${{pct(d.pOpened, d.sent)}}%)</span></td>
+      <td>${{d.pReplied}} <span class="rate">(${{pct(d.pReplied, d.sent)}}%)</span></td>
+      <td style="color:#2563eb">${{d.addedToSub}} <span class="rate">(${{pct(d.addedToSub, d.sent)}}%)</span></td>
+      <td>${{d.sLeads}}</td>
+      <td>${{d.sOpened}} <span class="rate">(${{pct(d.sOpened, d.sLeads)}}%)</span></td>
+      <td>${{d.sClicked}} <span class="rate">(${{pct(d.sClicked, d.sLeads)}}%)</span></td>
+      <td>${{d.sReplied}} <span class="rate">(${{pct(d.sReplied, d.sLeads)}}%)</span></td>
+      <td style="color:#059669">${{d.positive}} <span class="rate">(${{pct(d.positive, d.sent)}}%)</span></td>
+    </tr>`;
+  }});
+  html += '</tbody></table>';
+  container.innerHTML = html;
 }}
 
 // ── Main Campaign ─────────────────────────────────────────────────────────────

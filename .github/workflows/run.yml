@@ -2,8 +2,7 @@ name: Subsequence Analytics
 
 on:
   schedule:
-    - cron: '30 3 * * *'    # 9:00 AM IST
-    - cron: '30 15 * * *'   # 9:00 PM IST
+    - cron: '0 * * * *'     # every hour
   workflow_dispatch:
 
 env:
