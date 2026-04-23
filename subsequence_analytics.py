@@ -557,15 +557,17 @@ function renderCombinedCards() {{
   const totPReply = filtParent.reduce((s,r) => s + r.replied,      0);
   const totSub    = filtParent.reduce((s,r) => s + r.added_to_sub, 0);
   const totPos    = filtParent.reduce((s,r) => s + r.positive,     0);
-  const totSOpen  = filtSub.reduce((s,r)    => s + r.opened,       0);
-  const totSReply = filtSub.reduce((s,r)    => s + r.replied,      0);
-  const totSLeads = filtSub.reduce((s,r)    => s + r.total,        0);
+  const totSOpen   = filtSub.reduce((s,r)   => s + r.opened,       0);
+  const totSClick  = filtSub.reduce((s,r)   => s + r.clicked,      0);
+  const totSReply  = filtSub.reduce((s,r)   => s + r.replied,      0);
+  const totSLeads  = filtSub.reduce((s,r)   => s + r.total,        0);
   document.getElementById('combinedCards').innerHTML = `
     <div class="card"><div class="label">Total Sent</div><div class="value slate">${{totSent.toLocaleString()}}</div><div class="sub">${{filtParent.length}} campaigns</div></div>
     <div class="card"><div class="label">Lead. Opened</div><div class="value green">${{totPOpen.toLocaleString()}}</div><div class="sub">${{totSent ? (totPOpen/totSent*100).toFixed(1) : 0}}% of sent</div></div>
     <div class="card"><div class="label">Lead. Replied</div><div class="value purple">${{totPReply.toLocaleString()}}</div><div class="sub">${{totSent ? (totPReply/totSent*100).toFixed(1) : 0}}% of sent</div></div>
     <div class="card"><div class="label">Added to Sub</div><div class="value blue">${{totSub.toLocaleString()}}</div><div class="sub">${{totSent ? (totSub/totSent*100).toFixed(1) : 0}}% of sent</div></div>
     <div class="card"><div class="label">Sub Opened</div><div class="value emerald">${{totSOpen.toLocaleString()}}</div><div class="sub">${{totSLeads ? (totSOpen/totSLeads*100).toFixed(1) : 0}}% of sub leads</div></div>
+    <div class="card"><div class="label">Sub Clicked</div><div class="value blue">${{totSClick.toLocaleString()}}</div><div class="sub">${{totSLeads ? (totSClick/totSLeads*100).toFixed(1) : 0}}% of sub leads</div></div>
     <div class="card"><div class="label">Sub Replied</div><div class="value yellow">${{totSReply.toLocaleString()}}</div><div class="sub">${{totSLeads ? (totSReply/totSLeads*100).toFixed(1) : 0}}% of sub leads</div></div>
     <div class="card"><div class="label">Total Positive</div><div class="value rose">${{totPos.toLocaleString()}}</div><div class="sub">${{totSent ? (totPos/totSent*100).toFixed(1) : 0}}% conversion</div></div>
   `;
