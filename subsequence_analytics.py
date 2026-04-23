@@ -411,7 +411,7 @@ tr:hover td {{ background: #f8fafc; }}
     <div class="cards" id="combinedCards"></div>
 
     <div class="charts" style="grid-template-columns:1fr;">
-      <div class="chart-card"><h2>Full Pipeline by Client (Sent → Camp. Opened → Added to Sub → Sub Opened → Sub Replied)</h2><div class="chart-wrap" style="height:280px;"><canvas id="combinedPipelineChart"></canvas></div></div>
+      <div class="chart-card"><h2>Full Pipeline by Client (Sent → Lead. Opened → Added to Sub → Sub Opened → Sub Replied)</h2><div class="chart-wrap" style="height:280px;"><canvas id="combinedPipelineChart"></canvas></div></div>
     </div>
 
     <div class="table-card">
@@ -562,8 +562,8 @@ function renderCombinedCards() {{
   const totSLeads = filtSub.reduce((s,r)    => s + r.total,        0);
   document.getElementById('combinedCards').innerHTML = `
     <div class="card"><div class="label">Total Sent</div><div class="value slate">${{totSent.toLocaleString()}}</div><div class="sub">${{filtParent.length}} campaigns</div></div>
-    <div class="card"><div class="label">Camp. Opened</div><div class="value green">${{totPOpen.toLocaleString()}}</div><div class="sub">${{totSent ? (totPOpen/totSent*100).toFixed(1) : 0}}% of sent</div></div>
-    <div class="card"><div class="label">Camp. Replied</div><div class="value purple">${{totPReply.toLocaleString()}}</div><div class="sub">${{totSent ? (totPReply/totSent*100).toFixed(1) : 0}}% of sent</div></div>
+    <div class="card"><div class="label">Lead. Opened</div><div class="value green">${{totPOpen.toLocaleString()}}</div><div class="sub">${{totSent ? (totPOpen/totSent*100).toFixed(1) : 0}}% of sent</div></div>
+    <div class="card"><div class="label">Lead. Replied</div><div class="value purple">${{totPReply.toLocaleString()}}</div><div class="sub">${{totSent ? (totPReply/totSent*100).toFixed(1) : 0}}% of sent</div></div>
     <div class="card"><div class="label">Added to Sub</div><div class="value blue">${{totSub.toLocaleString()}}</div><div class="sub">${{totSent ? (totSub/totSent*100).toFixed(1) : 0}}% of sent</div></div>
     <div class="card"><div class="label">Sub Opened</div><div class="value emerald">${{totSOpen.toLocaleString()}}</div><div class="sub">${{totSLeads ? (totSOpen/totSLeads*100).toFixed(1) : 0}}% of sub leads</div></div>
     <div class="card"><div class="label">Sub Replied</div><div class="value yellow">${{totSReply.toLocaleString()}}</div><div class="sub">${{totSLeads ? (totSReply/totSLeads*100).toFixed(1) : 0}}% of sub leads</div></div>
@@ -596,8 +596,8 @@ function renderCombinedCharts() {{
       labels,
       datasets: [
         {{ label: 'Sent',         data: data.map(d => d.sent),       backgroundColor: '#cbd5e1', borderRadius: 3 }},
-        {{ label: 'Camp. Opened', data: data.map(d => d.pOpened),    backgroundColor: '#34d399', borderRadius: 3 }},
-        {{ label: 'Camp. Replied',data: data.map(d => d.pReplied),   backgroundColor: '#a78bfa', borderRadius: 3 }},
+        {{ label: 'Lead. Opened', data: data.map(d => d.pOpened),    backgroundColor: '#34d399', borderRadius: 3 }},
+        {{ label: 'Lead. Replied',data: data.map(d => d.pReplied),   backgroundColor: '#a78bfa', borderRadius: 3 }},
         {{ label: 'Added to Sub', data: data.map(d => d.addedToSub), backgroundColor: '#60a5fa', borderRadius: 3 }},
         {{ label: 'Sub Opened',   data: data.map(d => d.sOpened),    backgroundColor: '#059669', borderRadius: 3 }},
         {{ label: 'Sub Replied',  data: data.map(d => d.sReplied),   backgroundColor: '#f97316', borderRadius: 3 }},
@@ -635,28 +635,90 @@ function renderCombinedTable() {{
   const container = document.getElementById('combinedTableContainer');
   const rows = Object.entries(clientMap);
   if (!rows.length) {{ container.innerHTML = '<div class="no-data">No data.</div>'; return; }}
+  window._combinedRowsData = rows;
   let html = `<table><thead><tr>
     <th>Client</th>
-    <th>Sent</th><th>Camp. Opened</th><th>Camp. Replied</th><th>Added to Sub</th>
+    <th>Sent</th><th>Lead. Opened</th><th>Lead. Replied</th><th>Added to Sub</th>
     <th>Sub Leads</th><th>Sub Opened</th><th>Sub Clicked</th><th>Sub Replied</th><th>Positive</th>
   </tr></thead><tbody>`;
-  rows.forEach(([client, d]) => {{
+  rows.forEach(([client, d], idx) => {{
     const pct = (n, tot) => tot ? (n/tot*100).toFixed(1) : 0;
+    const mk = (val, tot, type, style) => {{
+      const pctStr = pct(val, tot);
+      const inner = `${{val}} <span class="rate">(${{pctStr}}%)</span>`;
+      if (val > 0) return `<span class="clickable"${{style ? ' style="'+style+'"' : ''}} ondblclick="openModalCombined(${{idx}},'${{type}}')">${{inner}}</span>`;
+      return style ? `<span style="${{style}}">${{inner}}</span>` : inner;
+    }};
     html += `<tr>
       <td><strong>${{esc(client)}}</strong></td>
       <td>${{d.sent}}</td>
-      <td>${{d.pOpened}} <span class="rate">(${{pct(d.pOpened, d.sent)}}%)</span></td>
-      <td>${{d.pReplied}} <span class="rate">(${{pct(d.pReplied, d.sent)}}%)</span></td>
-      <td style="color:#2563eb">${{d.addedToSub}} <span class="rate">(${{pct(d.addedToSub, d.sent)}}%)</span></td>
+      <td>${{mk(d.pOpened,  d.sent,   'pOpened',  '')}}</td>
+      <td>${{mk(d.pReplied, d.sent,   'pReplied', '')}}</td>
+      <td>${{mk(d.addedToSub, d.sent, 'addedToSub', 'color:#2563eb')}}</td>
       <td>${{d.sLeads}}</td>
-      <td>${{d.sOpened}} <span class="rate">(${{pct(d.sOpened, d.sLeads)}}%)</span></td>
-      <td>${{d.sClicked}} <span class="rate">(${{pct(d.sClicked, d.sLeads)}}%)</span></td>
-      <td>${{d.sReplied}} <span class="rate">(${{pct(d.sReplied, d.sLeads)}}%)</span></td>
-      <td style="color:#059669">${{d.positive}} <span class="rate">(${{pct(d.positive, d.sent)}}%)</span></td>
+      <td>${{mk(d.sOpened,  d.sLeads, 'sOpened',  '')}}</td>
+      <td>${{mk(d.sClicked, d.sLeads, 'sClicked', '')}}</td>
+      <td>${{mk(d.sReplied, d.sLeads, 'sReplied', '')}}</td>
+      <td>${{mk(d.positive, d.sent,   'positive', 'color:#059669')}}</td>
     </tr>`;
   }});
   html += '</tbody></table>';
   container.innerHTML = html;
+}}
+
+function openModalCombined(rowIdx, type) {{
+  const [client] = window._combinedRowsData[rowIdx];
+  let leads = [];
+  const typeLabels = {{
+    pOpened: '📬 Lead. Opened', pReplied: '💬 Lead. Replied',
+    positive: '✅ Positive', addedToSub: '➕ Added to Sub',
+    sOpened: '📬 Sub Opened', sClicked: '🖱 Sub Clicked', sReplied: '💬 Sub Replied'
+  }};
+  if (type === 'pOpened' || type === 'pReplied' || type === 'positive') {{
+    filtParent.filter(r => r.client === client).forEach(r => {{
+      (r.leads || []).forEach(l => {{
+        if (type === 'pOpened'  && l.open_time)  leads.push(l);
+        if (type === 'pReplied' && l.reply_time) leads.push(l);
+        if (type === 'positive' && POSITIVE_CATS.has((l.category||'').toLowerCase())) leads.push(l);
+      }});
+    }});
+  }} else if (type === 'addedToSub') {{
+    const seen = new Set();
+    filtSub.filter(r => r.parent === client).forEach(r => {{
+      (r.leads || []).forEach(l => {{
+        if (!seen.has(l.email)) {{ seen.add(l.email); leads.push(l); }}
+      }});
+    }});
+  }} else {{
+    filtSub.filter(r => r.parent === client).forEach(r => {{
+      (r.leads || []).forEach(l => {{
+        if (type === 'sOpened'  && l.open_time)  leads.push(l);
+        if (type === 'sClicked' && l.click_time) leads.push(l);
+        if (type === 'sReplied' && l.reply_time) leads.push(l);
+      }});
+    }});
+  }}
+  document.getElementById('modalTitle').textContent = (typeLabels[type] || type) + ' — ' + client;
+  window._modalLeads = leads;
+  const listEl = document.getElementById('leadList');
+  if (!leads.length) {{
+    listEl.innerHTML = '<div class="empty-list">No lead details available.</div>';
+    document.getElementById('msgPanel').innerHTML = '<div class="placeholder">No leads found.</div>';
+  }} else {{
+    listEl.innerHTML = leads.map((l, i) => `
+      <div class="lead-item" id="li-${{i}}" onclick="showMessages(${{i}})">
+        <div class="lead-name">${{esc(l.name || '(No Name)')}}</div>
+        <div class="lead-email">${{esc(l.email)}}</div>
+        <div class="lead-meta">
+          ${{l.open_time  ? '📬 ' + fmtDate(l.open_time)  : ''}}
+          ${{l.click_time ? ' 🖱 ' + fmtDate(l.click_time) : ''}}
+          ${{l.reply_time ? ' 💬 ' + fmtDate(l.reply_time) : ''}}
+        </div>
+        ${{l.category ? '<div class="lead-cat">' + esc(l.category) + '</div>' : ''}}
+      </div>`).join('');
+    document.getElementById('msgPanel').innerHTML = '<div class="placeholder">← Select a lead</div>';
+  }}
+  document.getElementById('modalOverlay').classList.add('open');
 }}
 
 // ── Main Campaign ─────────────────────────────────────────────────────────────
@@ -746,7 +808,7 @@ function renderMainTable() {{
       <td>${{oCell}}</td>
       <td>${{cCell}}</td>
       <td>${{rCell}}</td>
-      <td style="color:#059669">${{r.positive}} <span class="rate">(${{r.positive_rate}}%)</span></td>
+      <td style="color:#059669">${{r.positive > 0 ? `<span class="clickable" style="color:#059669" ondblclick="openModalParent(${{i}},'positive')">${{r.positive}} <span class="rate">(${{r.positive_rate}}%)</span></span>` : `${{r.positive}} <span class="rate">(${{r.positive_rate}}%)</span>`}}</td>
       <td style="color:#2563eb">${{r.added_to_sub}} <span class="rate">(${{r.added_to_sub_rate}}%)</span></td>
       <td>${{r.bounced}}</td>
     </tr>`;
@@ -758,12 +820,13 @@ function renderMainTable() {{
 function openModalParent(rowIdx, type) {{
   const row = filtParent[rowIdx];
   const leads = (row.leads || []).filter(l => {{
-    if (type === 'opened')  return l.open_time;
-    if (type === 'clicked') return l.click_time;
-    if (type === 'replied') return l.reply_time;
+    if (type === 'opened')   return l.open_time;
+    if (type === 'clicked')  return l.click_time;
+    if (type === 'replied')  return l.reply_time;
+    if (type === 'positive') return POSITIVE_CATS.has((l.category||'').toLowerCase());
     return false;
   }});
-  const typeLabel = type === 'opened' ? '📬 Opened' : type === 'clicked' ? '🖱 Clicked' : '💬 Replied';
+  const typeLabel = type === 'opened' ? '📬 Opened' : type === 'clicked' ? '🖱 Clicked' : type === 'positive' ? '✅ Positive' : '💬 Replied';
   document.getElementById('modalTitle').textContent = typeLabel + ' — ' + esc(row.raw_name);
   window._modalLeads = leads;
   const listEl = document.getElementById('leadList');
@@ -842,12 +905,13 @@ function renderSubTable() {{
     const sc = r.status === 'ACTIVE' ? '#22c55e' : '#94a3b8';
     const oCell = r.opened  > 0 ? `<span class="clickable" ondblclick="openModal(${{i}},'opened')">${{r.opened}} <span class="rate">(${{r.open_rate}}%)</span></span>`  : `0 <span class="rate">(0%)</span>`;
     const cCell = r.clicked > 0 ? `<span class="clickable" ondblclick="openModal(${{i}},'clicked')">${{r.clicked}} <span class="rate">(${{r.click_rate}}%)</span></span>` : `0 <span class="rate">(0%)</span>`;
+    const rCell = r.replied > 0 ? `<span class="clickable" ondblclick="openModal(${{i}},'replied')">${{r.replied}} <span class="rate">(${{r.reply_rate}}%)</span></span>` : `0 <span class="rate">(0%)</span>`;
     html += `<tr>
       <td><strong>${{esc(r.parent)}}</strong></td>
       <td>${{esc(r.subsequence)}}</td>
       <td><span class="badge" style="background:${{sc}}">${{r.status}}</span></td>
       <td>${{r.total}}</td><td>${{oCell}}</td><td>${{cCell}}</td>
-      <td>${{r.replied}} <span class="rate">(${{r.reply_rate}}%)</span></td>
+      <td>${{rCell}}</td>
       <td>${{r.bounced}}</td><td>${{r.unsubscribed}}</td>
     </tr>`;
   }});
@@ -858,11 +922,11 @@ function renderSubTable() {{
 // ── Modal ─────────────────────────────────────────────────────────────────────
 function openModal(rowIdx, type) {{
   const row = filtSub[rowIdx];
-  const leads = type === 'opened'
-    ? (row.leads||[]).filter(l => l.open_time)
-    : (row.leads||[]).filter(l => l.click_time);
-  document.getElementById('modalTitle').textContent =
-    (type === 'opened' ? '📬 Opened' : '🖱 Clicked') + ' — ' + row.subsequence;
+  const leads = type === 'opened'  ? (row.leads||[]).filter(l => l.open_time)
+              : type === 'clicked' ? (row.leads||[]).filter(l => l.click_time)
+              :                      (row.leads||[]).filter(l => l.reply_time);
+  const typeLabel = type === 'opened' ? '📬 Opened' : type === 'clicked' ? '🖱 Clicked' : '💬 Replied';
+  document.getElementById('modalTitle').textContent = typeLabel + ' — ' + row.subsequence;
   window._modalLeads = leads;
   const listEl = document.getElementById('leadList');
   if (!leads.length) {{
@@ -876,6 +940,7 @@ function openModal(rowIdx, type) {{
         <div class="lead-meta">
           ${{l.open_time  ? '📬 ' + fmtDate(l.open_time)  : ''}}
           ${{l.click_time ? ' 🖱 ' + fmtDate(l.click_time) : ''}}
+          ${{l.reply_time ? ' 💬 ' + fmtDate(l.reply_time) : ''}}
         </div>
         ${{l.category ? '<div class="lead-cat">' + esc(l.category) + '</div>' : ''}}
       </div>`).join('');
