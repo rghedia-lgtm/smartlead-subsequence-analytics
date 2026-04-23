@@ -426,8 +426,8 @@ tr:hover td {{ background: #f8fafc; }}
     <div class="cards" id="mainCards"></div>
 
     <div class="charts">
-      <div class="chart-card"><h2>Sent vs Opened vs Positive by Client</h2><div class="chart-wrap"><canvas id="mainFunnelChart"></canvas></div></div>
-      <div class="chart-card"><h2>Added to Subsequence by Client</h2><div class="chart-wrap"><canvas id="mainSubChart"></canvas></div></div>
+      <div class="chart-card"><h2>Opened Leads by Client</h2><div class="chart-wrap" style="height:260px;"><canvas id="mainFunnelChart"></canvas></div></div>
+      <div class="chart-card"><h2>Added to Sub by Client</h2><div class="chart-wrap" style="height:260px;"><canvas id="mainSubChart"></canvas></div></div>
     </div>
 
     <div class="table-card">
@@ -597,20 +597,20 @@ function renderCombinedCharts() {{
     data: {{
       labels,
       datasets: [
-        {{ label: 'Sent',         data: data.map(d => d.sent),       backgroundColor: '#cbd5e1', borderRadius: 3 }},
-        {{ label: 'Lead. Opened', data: data.map(d => d.pOpened),    backgroundColor: '#34d399', borderRadius: 3 }},
-        {{ label: 'Lead. Replied',data: data.map(d => d.pReplied),   backgroundColor: '#a78bfa', borderRadius: 3 }},
-        {{ label: 'Added to Sub', data: data.map(d => d.addedToSub), backgroundColor: '#60a5fa', borderRadius: 3 }},
-        {{ label: 'Sub Opened',   data: data.map(d => d.sOpened),    backgroundColor: '#059669', borderRadius: 3 }},
-        {{ label: 'Sub Replied',  data: data.map(d => d.sReplied),   backgroundColor: '#f97316', borderRadius: 3 }},
+        {{ label: 'Sent',         data: data.map(d => d.sent),       backgroundColor: '#94a3b8', borderRadius: 4 }},
+        {{ label: 'Lead. Opened', data: data.map(d => d.pOpened),    backgroundColor: '#22d3ee', borderRadius: 4 }},
+        {{ label: 'Lead. Replied',data: data.map(d => d.pReplied),   backgroundColor: '#c084fc', borderRadius: 4 }},
+        {{ label: 'Added to Sub', data: data.map(d => d.addedToSub), backgroundColor: '#38bdf8', borderRadius: 4 }},
+        {{ label: 'Sub Opened',   data: data.map(d => d.sOpened),    backgroundColor: '#4ade80', borderRadius: 4 }},
+        {{ label: 'Sub Replied',  data: data.map(d => d.sReplied),   backgroundColor: '#fb923c', borderRadius: 4 }},
       ]
     }},
     options: {{
       responsive: true, maintainAspectRatio: false,
-      plugins: {{ legend: {{ labels: {{ color: '#94a3b8', font: {{ size: 11 }} }} }} }},
+      plugins: {{ legend: {{ labels: {{ color: '#64748b', font: {{ size: 11 }} }} }} }},
       scales: {{
-        x: {{ ticks: {{ color: '#64748b', font: {{ size: 11 }} }}, grid: {{ color: '#f1f5f9' }} }},
-        y: {{ ticks: {{ color: '#64748b' }}, grid: {{ color: '#e2e8f0' }} }}
+        x: {{ ticks: {{ color: '#64748b', font: {{ size: 11 }} }}, grid: {{ color: '#f8fafc' }} }},
+        y: {{ ticks: {{ color: '#64748b' }}, grid: {{ color: '#f1f5f9' }} }}
       }}
     }}
   }});
@@ -744,46 +744,36 @@ function renderMainCards() {{
 }}
 
 function renderMainCharts() {{
-  const labels   = filtParent.map(r => r.client);
+  const PIE_COLORS = ['#f43f5e','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#a855f7','#ef4444','#84cc16','#0ea5e9'];
+  const clientLabels = [...new Set(filtParent.map(r => r.client))];
+  const clientOpened = clientLabels.map(c => filtParent.filter(r => r.client===c).reduce((s,r)=>s+r.opened,0));
+  const clientSub    = clientLabels.map(c => filtParent.filter(r => r.client===c).reduce((s,r)=>s+r.added_to_sub,0));
+  const pieOpts = (title) => ({{
+    responsive: true, maintainAspectRatio: false,
+    plugins: {{
+      legend: {{ position: 'right', labels: {{ color: '#475569', font: {{ size: 11 }}, padding: 12, boxWidth: 14 }} }},
+      tooltip: {{ callbacks: {{ label: ctx => ` ${{ctx.label}}: ${{ctx.parsed.toLocaleString()}} (${{(ctx.parsed/ctx.dataset.data.reduce((a,b)=>a+b,0)*100).toFixed(1)}}%)` }} }}
+    }}
+  }});
+
   if (charts['mainFunnelChart']) charts['mainFunnelChart'].destroy();
   charts['mainFunnelChart'] = new Chart(document.getElementById('mainFunnelChart'), {{
-    type: 'bar',
+    type: 'doughnut',
     data: {{
-      labels,
-      datasets: [
-        {{ label: 'Sent',      data: filtParent.map(r => r.total),    backgroundColor: '#cbd5e1', borderRadius: 3 }},
-        {{ label: 'Opened',    data: filtParent.map(r => r.opened),   backgroundColor: '#34d399', borderRadius: 3 }},
-        {{ label: 'Positive',  data: filtParent.map(r => r.positive), backgroundColor: '#059669', borderRadius: 3 }},
-      ]
+      labels: clientLabels,
+      datasets: [{{ data: clientOpened, backgroundColor: PIE_COLORS, borderWidth: 2, borderColor: '#fff', hoverOffset: 8 }}]
     }},
-    options: {{
-      responsive: true, maintainAspectRatio: false,
-      plugins: {{ legend: {{ labels: {{ color: '#94a3b8', font: {{ size: 11 }} }} }} }},
-      scales: {{
-        x: {{ ticks: {{ color: '#64748b', font: {{ size: 11 }} }}, grid: {{ color: '#f1f5f9' }} }},
-        y: {{ ticks: {{ color: '#64748b' }}, grid: {{ color: '#e2e8f0' }} }}
-      }}
-    }}
+    options: pieOpts('Opened Leads by Client')
   }});
 
   if (charts['mainSubChart']) charts['mainSubChart'].destroy();
   charts['mainSubChart'] = new Chart(document.getElementById('mainSubChart'), {{
-    type: 'bar',
+    type: 'doughnut',
     data: {{
-      labels,
-      datasets: [
-        {{ label: 'Opened',       data: filtParent.map(r => r.opened),      backgroundColor: '#34d399', borderRadius: 3 }},
-        {{ label: 'Added to Sub', data: filtParent.map(r => r.added_to_sub),backgroundColor: '#60a5fa', borderRadius: 3 }},
-      ]
+      labels: clientLabels,
+      datasets: [{{ data: clientSub, backgroundColor: PIE_COLORS, borderWidth: 2, borderColor: '#fff', hoverOffset: 8 }}]
     }},
-    options: {{
-      responsive: true, maintainAspectRatio: false,
-      plugins: {{ legend: {{ labels: {{ color: '#94a3b8', font: {{ size: 11 }} }} }} }},
-      scales: {{
-        x: {{ ticks: {{ color: '#64748b', font: {{ size: 11 }} }}, grid: {{ color: '#f1f5f9' }} }},
-        y: {{ ticks: {{ color: '#64748b' }}, grid: {{ color: '#e2e8f0' }} }}
-      }}
-    }}
+    options: pieOpts('Added to Sub by Client')
   }});
 }}
 
@@ -871,27 +861,77 @@ function renderSubCards() {{
 }}
 
 function renderSubCharts() {{
-  const active = filtSub.filter(r => r.total > 0);
-  const labels = active.map(r => r.subsequence);
-  [
-    {{ id: 'openChart',  data: active.map(r => r.open_rate),  color: '#34d399', pct: true  }},
-    {{ id: 'clickChart', data: active.map(r => r.click_rate), color: '#60a5fa', pct: true  }},
-    {{ id: 'replyChart', data: active.map(r => r.reply_rate), color: '#a78bfa', pct: true  }},
-    {{ id: 'leadsChart', data: active.map(r => r.total),      color: '#fbbf24', pct: false }},
-  ].forEach(cfg => {{
-    if (charts[cfg.id]) charts[cfg.id].destroy();
-    charts[cfg.id] = new Chart(document.getElementById(cfg.id), {{
-      type: 'bar',
-      data: {{ labels, datasets: [{{ data: cfg.data, backgroundColor: cfg.color, borderRadius: 4 }}] }},
-      options: {{
-        responsive: true, maintainAspectRatio: false,
-        plugins: {{ legend: {{ display: false }}, tooltip: {{ callbacks: {{ label: ctx => cfg.pct ? ` ${{ctx.parsed.y}}%` : ` ${{ctx.parsed.y}}` }} }} }},
-        scales: {{
-          x: {{ ticks: {{ color: '#64748b', font: {{ size: 10 }}, maxRotation: 45 }}, grid: {{ color: '#f1f5f9' }} }},
-          y: {{ ticks: {{ color: '#64748b', callback: v => cfg.pct ? v + '%' : v }}, grid: {{ color: '#e2e8f0' }}, min: 0, ...(cfg.pct ? {{max:100}} : {{}}) }}
-        }}
+  const active  = filtSub.filter(r => r.total > 0);
+  const labels  = active.map(r => r.subsequence);
+  const dynH    = id => {{ document.getElementById(id).parentElement.style.height = Math.max(280, active.length * 30) + 'px'; }};
+  const hBarOpts = (pct) => ({{
+    responsive: true, maintainAspectRatio: false,
+    indexAxis: 'y',
+    plugins: {{ legend: {{ display: false }}, tooltip: {{ callbacks: {{ label: ctx => pct ? ` ${{ctx.parsed.x}}%` : ` ${{ctx.parsed.x}}` }} }} }},
+    scales: {{
+      x: {{ ticks: {{ color: '#64748b', callback: v => pct ? v+'%' : v }}, grid: {{ color: '#f1f5f9' }}, min: 0, ...(pct ? {{max:100}} : {{}}) }},
+      y: {{ ticks: {{ color: '#475569', font: {{ size: 10 }} }}, grid: {{ display: false }} }}
+    }}
+  }});
+
+  // Open Rate — horizontal bar
+  dynH('openChart');
+  if (charts['openChart']) charts['openChart'].destroy();
+  charts['openChart'] = new Chart(document.getElementById('openChart'), {{
+    type: 'bar',
+    data: {{ labels, datasets: [{{ data: active.map(r => r.open_rate), backgroundColor: '#22d3ee', borderRadius: 4 }}] }},
+    options: hBarOpts(true)
+  }});
+
+  // Click Rate — grouped bar (open + click + reply)
+  if (charts['clickChart']) charts['clickChart'].destroy();
+  charts['clickChart'] = new Chart(document.getElementById('clickChart'), {{
+    type: 'bar',
+    data: {{
+      labels,
+      datasets: [
+        {{ label: 'Open %',  data: active.map(r => r.open_rate),  backgroundColor: '#22d3ee', borderRadius: 3 }},
+        {{ label: 'Click %', data: active.map(r => r.click_rate), backgroundColor: '#f43f5e', borderRadius: 3 }},
+        {{ label: 'Reply %', data: active.map(r => r.reply_rate), backgroundColor: '#a855f7', borderRadius: 3 }},
+      ]
+    }},
+    options: {{
+      responsive: true, maintainAspectRatio: false,
+      plugins: {{ legend: {{ labels: {{ color: '#475569', font: {{ size: 11 }} }} }}, tooltip: {{ callbacks: {{ label: ctx => ` ${{ctx.dataset.label}}: ${{ctx.parsed.y}}%` }} }} }},
+      scales: {{
+        x: {{ ticks: {{ color: '#64748b', font: {{ size: 10 }}, maxRotation: 45 }}, grid: {{ color: '#f8fafc' }} }},
+        y: {{ ticks: {{ color: '#64748b', callback: v => v+'%' }}, grid: {{ color: '#f1f5f9' }}, min: 0, max: 100 }}
       }}
-    }});
+    }}
+  }});
+
+  // Reply Rate — horizontal bar
+  dynH('replyChart');
+  if (charts['replyChart']) charts['replyChart'].destroy();
+  charts['replyChart'] = new Chart(document.getElementById('replyChart'), {{
+    type: 'bar',
+    data: {{ labels, datasets: [{{ data: active.map(r => r.reply_rate), backgroundColor: '#a855f7', borderRadius: 4 }}] }},
+    options: hBarOpts(true)
+  }});
+
+  // Total Leads — sorted bar
+  const sorted = [...active].sort((a,b) => b.total - a.total);
+  const BAR_COLORS = ['#f43f5e','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#a855f7','#ef4444','#84cc16','#0ea5e9','#fb923c','#4ade80','#38bdf8','#c084fc','#f472b6'];
+  if (charts['leadsChart']) charts['leadsChart'].destroy();
+  charts['leadsChart'] = new Chart(document.getElementById('leadsChart'), {{
+    type: 'bar',
+    data: {{
+      labels: sorted.map(r => r.subsequence),
+      datasets: [{{ data: sorted.map(r => r.total), backgroundColor: sorted.map((_,i) => BAR_COLORS[i % BAR_COLORS.length]), borderRadius: 5 }}]
+    }},
+    options: {{
+      responsive: true, maintainAspectRatio: false,
+      plugins: {{ legend: {{ display: false }}, tooltip: {{ callbacks: {{ label: ctx => ` Leads: ${{ctx.parsed.y}}` }} }} }},
+      scales: {{
+        x: {{ ticks: {{ color: '#64748b', font: {{ size: 10 }}, maxRotation: 45 }}, grid: {{ color: '#f8fafc' }} }},
+        y: {{ ticks: {{ color: '#64748b' }}, grid: {{ color: '#f1f5f9' }} }}
+      }}
+    }}
   }});
 }}
 
